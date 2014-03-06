@@ -1,5 +1,3 @@
-import java.util.ArrayList;
-
 import com.pi4j.io.gpio.GpioController;
 import com.pi4j.io.gpio.GpioFactory;
 import com.pi4j.io.gpio.GpioPinDigitalInput;
@@ -8,25 +6,22 @@ import com.pi4j.io.gpio.RaspiPin;
 import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent;
 import com.pi4j.io.gpio.event.GpioPinListener;
 import com.pi4j.io.gpio.event.GpioPinListenerDigital;
-import com.pi4j.wiringpi.Gpio;
 
 public class Receive
 {
-  public static int RCSWITCH_MAX_CHANGES = 67;
+  //public static int RCSWITCH_MAX_CHANGES = 67;
+	 public static int RCSWITCH_MAX_CHANGES = 800;
 
-  public static ArrayList<Integer> timings = new ArrayList();
-
+  public static int[] timings = new int[RCSWITCH_MAX_CHANGES];
+  
   public static int nReceivedValue = 0;
   public static int nReceivedBitlength = 0;
   public static int nReceivedDelay = 0;
   public static int nReceivedProtocol = 0;
-  public static int nReceiveTolerance = 120;
+  public static int nReceiveTolerance = 120; 
 
   public static void main(String[] args) throws InterruptedException
   {
-    for (int i = 0; i < RCSWITCH_MAX_CHANGES; i++) {
-      timings.add(0);
-    }
 
     GpioController gpio = GpioFactory.getInstance();
     
@@ -41,22 +36,17 @@ public class Receive
 
       public void handleGpioPinDigitalStateChangeEvent(GpioPinDigitalStateChangeEvent event)
       {
-
-        String stateName = event.getState().getName();
-
        
         int time = (int) (System.nanoTime() / 1000);
         duration = time - lastTime;
 
-//        System.err.println(stateName+"\t "+duration);
-       
-        if (duration > 5000 && duration > (timings.get(0) - 200) && duration < (timings.get(0) + 200) )
+
+        if (duration > 5000 && duration > (timings[0] - 200) && duration < (timings[0] + 200) )
         {
+        	
           repeatCount++;
           changeCount--;
 
-//          System.err.println(stateName+"\t "+duration+"\t "+timings.get(changeCount)+"\t "+repeatCount+"\t "+changeCount);
-          
           if (repeatCount == 2) {
         	  if (receiveProtocol1(changeCount) == false){       		  
 //        	        if (receiveProtocol2(changeCount) == false){
@@ -73,10 +63,12 @@ public class Receive
         }
 
         if (changeCount >= RCSWITCH_MAX_CHANGES) {
+        	System.out.println("RCSWITCH_MAX_CHANGES");
           changeCount = 0;
           repeatCount = 0;
         }
-        timings.set(changeCount++, duration);
+        timings[changeCount++] = duration;
+        
         lastTime = time;
         
         
@@ -86,14 +78,14 @@ public class Receive
       private boolean receiveProtocol1(int changeCount){
           
       	  String binCode = "";
-          long delay = timings.get(0) / 31;
+          long delay = timings[0] / 31;
           long delayTolerance = (long) (delay * nReceiveTolerance * 0.01);    
 
 
             for (int i = 1; i<changeCount ; i=i+2) { 
-                if (timings.get(i) > delay - delayTolerance && timings.get(i) < delay+delayTolerance && timings.get(i+1) > delay*3-delayTolerance && timings.get(i+1) < delay*3+delayTolerance) {                	
+                if (timings[i] > delay - delayTolerance && timings[i] < delay+delayTolerance && timings[i+1] > delay*3-delayTolerance && timings[i+1] < delay*3+delayTolerance) {                	
                 	binCode += "0";
-                } else if (timings.get(i) > delay*3-delayTolerance && timings.get(i) < delay*3+delayTolerance && timings.get(i+1) > delay-delayTolerance && timings.get(i+1) < delay+delayTolerance) {
+                } else if (timings[i] > delay*3-delayTolerance && timings[i] < delay*3+delayTolerance && timings[i+1] > delay-delayTolerance && timings[i+1] < delay+delayTolerance) {
                 	binCode += "1";
                 } else {
                   // Failed
@@ -110,13 +102,11 @@ public class Receive
     	    nReceivedProtocol = 1;
 
             System.out.println();
-            System.out.println(nReceivedValue +"\t"+ binCode + "\t"+ nReceivedBitlength);
-//            System.out.println("DecValue: " + nReceivedValue);
-//            System.out.println("BitLength: " + nReceivedBitlength);
-//      	    System.out.println("size: "+timings.size());
-//      	    for (int i = 0; i < timings.size(); i++) {
-//      	    	System.out.print(timings.get(i)+" ");
-//			}
+            System.out.println(nReceivedValue +"\t"+ binCode + "\t"+ nReceivedBitlength + "\t"+ changeCount);
+            for (int i = 1; i < changeCount; i++) {
+				System.out.print(timings[i]+" ");
+			}
+            System.out.println();
       	    System.out.println();
       	    
           }
@@ -138,15 +128,15 @@ public class Receive
 //      private boolean receiveProtocol2(int changeCount){
 //          
 //      	  long code = 0;
-//          long delay = timings.get(0) / 10;
+//          long delay = timings[0] / 10;
 //          long delayTolerance = (long) (delay * nReceiveTolerance * 0.01);    
 //
 //          
 //            for (int i = 1; i<changeCount ; i=i+2) {
 //            
-//                if (timings.get(i) > delay - delayTolerance && timings.get(i) < delay+delayTolerance && timings.get(i+1) > delay*2-delayTolerance && timings.get(i+1) < delay*2+delayTolerance) {
+//                if (timings[i] > delay - delayTolerance && timings[i] < delay+delayTolerance && timings[i+1] > delay*2-delayTolerance && timings[i+1] < delay*2+delayTolerance) {
 //                  code = code << 1;
-//                } else if (timings.get(i) > delay*2-delayTolerance && timings.get(i) < delay*2+delayTolerance && timings.get(i+1) > delay-delayTolerance && timings.get(i+1) < delay+delayTolerance) {
+//                } else if (timings[i] > delay*2-delayTolerance && timings[i] < delay*2+delayTolerance && timings[i+1] > delay-delayTolerance && timings[i+1] < delay+delayTolerance) {
 //                  code+=1;
 //                  code = code << 1;
 //                } else {

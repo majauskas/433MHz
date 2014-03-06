@@ -25,8 +25,9 @@ public class SSH {
 		        Session session = shell.getSession(user, ip, port);  
 		        session.setUserInfo(new SSHUserInfo(password));  
 		        session.connect(); 
-	 
+		        System.out.println("----------------------------------");
 		        System.out.println("CONNECTED TO "+ip);
+		        System.out.println("----------------------------------");
 		        break;
 			} catch (JSchException e) {
 				System.err.println(ip + "  "+e.getMessage());
